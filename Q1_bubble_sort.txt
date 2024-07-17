@@ -1,0 +1,57 @@
+main:
+
+    add $t0,$zero, $imm, 256        # address of array
+
+    add $t1, $zero, $imm, 16         # size (16) of array into $t1
+
+    sub $t1, $t1, $imm, 1      # i limitation (15) for the outer loop
+
+    add $t2, $zero, $imm, 0       # i = 0 
+
+
+outer_loop:
+
+    bge $imm, $t2, $t1 ,exit       # If i>=15 branch exit and finish the program
+
+    add $a0, $zero, $imm, 0      # j=0
+
+
+inner_loop:
+
+    sub $a1 ,$t1, $t2, 0  # 16 - i -1 = 15 - i
+
+    bge $imm, $a0, $a1, 0 increment_outer # If j >= 15 - i, branch to increment outer counter  
+
+    add $s0, $t0, $a0, 0   # Address of array[j] (notice our addresses are 1 byte so no sll needed)
+
+    lw $s1, $zero, $s0, 0       # Load array[j] into $s1 - previous (lw $s1, 0($s0))
+
+    lw $s2, $imm, $s0, 1       # Load array[j+1] into $s2 - previous (lw $s2, 1($s0))
+
+    ble $imm, $s1, $s2, no_swap  # If array[j] <= array[j+1], no swap
+
+
+    # Swap array[j] and array[j+1]
+
+    sw $s2, $zero, $s0, 0       # Store array[j+1] in array[j]
+
+    sw $s1, $zero, $t5, 0       # Store array[j] in array[j+1]
+
+
+no_swap:
+
+    add $a0, $a0,$imm, 1     # Increment inner loop counter
+
+    beq $imm, $zero, $zero, inner_loop         # Jump to inner loop
+
+
+increment_outer:
+
+    add $t2, $t2, $imm, 1    # i++
+
+    beq $imm, $zero, $zero, outer_loop         # Jump to outer loop
+
+
+exit:
+
+	halt $zero, $zero, $zero, 0			# halt
