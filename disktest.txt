@@ -1,0 +1,46 @@
+
+main:
+	add $s0, $imm, $zero, 1000	# set the address where we want to write into the sector - to 2000
+	add $s1, $zero, $zero, 0	# $s1 = 0 , start from sector[0]
+	add $a0, $zero, $imm, 128	#$a0 = number of words
+
+read:
+	add $t2, $imm, $zero, 1 	# $t2 = 1, read command (diskcmd)
+	out $s1, $zero, $imm, 15	# choose which sector to read from (disksector) - we chose sector 0
+	out $s0, $zero, $imm, 16	# diskbuffer - the memory address to read the sector into (2000) 
+	out $t2, $zero, $imm, 14	# diskcmd - choose to read from this sector 
+
+loop:
+	in $t0, $zero, $imm, 17		# diskstatus - check if the disk is busy
+	bne $imm, $zero, $t0, loop	# if status = 1 ,so your disk is busy, try again loop
+	add $s2, $imm, $zero, 0	    # $s2 = 0, sum of the sector
+	add $s1, $s1, $imm, 1		# $s1 = $s1 + 1, move to the next sector
+	jal $ra, $imm, $zero, sum	# jump to sum, where you will sum the sectors
+	add $t0, $imm, $zero, 8		#
+	bne $imm, $t0, $s1 , read	# if didnt read all 8 sectors, read
+
+write:
+	in $t0, $zero, $imm, 17		# check diskstatus
+	bne $imm, $zero, $t0, write	# if status = 1 , so your disk is busy, try again write
+	add $s0, $imm, $zero, 1128	# set the address where we want to write into the sector - to 2128
+	add $s1, $imm, $zero, 8		# set $s1 to 8 
+	add $t2, $imm, $zero, 2 	# $t2 = 2, write command (diskcmd)
+	out $s1, $zero, $imm, 15	# choose which sector to write into (disksector) - we chose sector 8
+	out $s0, $zero, $imm, 16	# diskbuffer - the memory address to write into the sector
+	out $t2, $zero, $imm, 14	# diskcmd - choose to write into this sector
+	jal $ra, $imm, $zero, finish	# finish
+
+sum:
+	lw $t1, $imm, $s2, 1000		# the address 1000-1127 is where we temporary save the sum in the memory	
+	lw $t0, $imm, $s2, 1128		# the address 1128-1255 is where we store the current sector, it's like disk[$s1*128 + $s2]
+	add $t1, $t1, $t0, 0		# $t1 = $t1 + $t0 , sum the sector 		 
+	sw $t1, $imm, $s2, 1128		# store sum at word number $s2		
+	add $s2, $s2, $imm, 1		# $s2 = $s2 + 1, go to next word	
+	bne $imm, $s2, $a0, sum		# if number of words in a sector is not reached to 128, sum
+	out $ra, $zero, $imm, 7		# if reached to 128, return to the main
+	reti $ra, $zero, $zero, 0	# return to the main
+
+finish:
+	in $t0, $zero, $imm, 17		 # checking disk status
+	bne $imm, $zero, $t0, finish # if status = 1, the disk is busy, try again finish
+	halt $zero, $zero, $zero, 0	 # finish the program
